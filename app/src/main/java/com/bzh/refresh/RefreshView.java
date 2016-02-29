@@ -22,6 +22,7 @@ public class RefreshView extends View {
     public static final int MODE_SETUP_2 = MODE_SETUP_1 << 1;
     public static final int MODE_SETUP_3 = MODE_SETUP_2 << 1;
     public static final int MODE_SETUP_4 = MODE_SETUP_3 << 1;
+    public static final int MODE_SETUP_5 = MODE_SETUP_4 << 1;
 
     public static final float ANGLE_DIAGONAL = 45.0f;
 
@@ -212,6 +213,13 @@ public class RefreshView extends View {
             break;
             case MODE_SETUP_4: {
                 Log.d(TAG, "drawStateContent() called with: " + "mCurrentMode = [" + MODE_SETUP_4 + "]");
+
+//                mCurrentMode = MODE_SETUP_5;
+//                postInvalidate();
+            }
+            break;
+            case MODE_SETUP_5: {
+                
             }
             break;
         }
