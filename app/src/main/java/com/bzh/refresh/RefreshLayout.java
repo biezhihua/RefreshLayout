@@ -1,5 +1,8 @@
 package com.bzh.refresh;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.support.v4.content.ContextCompat;
@@ -13,6 +16,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.widget.AbsListView;
 import android.widget.FrameLayout;
 
@@ -32,13 +37,16 @@ public class RefreshLayout extends FrameLayout {
     public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;
     private float mRefreshViewMaxHeight;
     private float mRefreshViewHeight;
-    private int mRefreshViewColor;
-    private int mTouchSlop;
-    private View mListView;
-    private RefreshRlView mRefreshRlView;
     private float mTouchStartY;
     private float mTouchCurrentY;
-    private boolean yRefreshing = false;
+    private int mRefreshViewColor;
+    private int mTouchSlop;
+    private float oldOffsetY;
+    private boolean yRefreshing;
+    private View mListView;
+    private RefreshRlView mRefreshRlView;
+    private ValueAnimator mUpBackAnimator;
+    private ValueAnimator mUpTopAnimator;
 
     public RefreshLayout(Context context) {
         this(context, null);
@@ -65,6 +73,55 @@ public class RefreshLayout extends FrameLayout {
 
         mTouchSlop = ViewConfigurationCompat.getScaledPagingTouchSlop(ViewConfiguration.get(context));
 
+        initHeaderView(context, attrs);
+        initUpChildAnimation();
+    }
+
+    private void initUpChildAnimation() {
+        if (mListView == null) {
+            return;
+        }
+
+        if (mUpTopAnimator == null) {
+            mUpTopAnimator = ValueAnimator.ofFloat(mRefreshViewHeight, 0);
+            mUpTopAnimator.setInterpolator(new DecelerateInterpolator(10));
+            mUpTopAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator animation) {
+                    float val = ((float) animation.getAnimatedValue());
+
+                    if (mRefreshRlView != null && mListView != null) {
+                        mListView.setTranslationY(val);
+                        mRefreshRlView.getLayoutParams().height = (int) val;
+                        mRefreshRlView.requestLayout();
+                        mRefreshRlView.setPadding(0, 0, 0, (int) (mRefreshViewHeight - val));
+                    }
+                }
+            });
+            mUpTopAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                }
+            });
+            mUpTopAnimator.setDuration(300);
+        } else if (mUpTopAnimator.isRunning()) {
+            mUpTopAnimator.cancel();
+        }
+
+
+        final float upBackDistanceY = mRefreshViewMaxHeight - mRefreshViewHeight;
+        mUpBackAnimator = ValueAnimator.ofFloat(mRefreshViewMaxHeight, mRefreshViewHeight);
+        mUpBackAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float val = (float) animation.getAnimatedValue();
+            }
+        });
+        mUpBackAnimator.setDuration(500);
+    }
+
+    private void initHeaderView(Context context, AttributeSet attrs) {
         mRefreshRlView = new RefreshRlView(context, attrs);
         LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
         params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
@@ -93,6 +150,48 @@ public class RefreshLayout extends FrameLayout {
         }
     }
 
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if (!isEnabled()) {
+            return false;
+        }
+
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                mTouchStartY = ev.getY();
+                mTouchCurrentY = mTouchStartY;
+                break;
+            case MotionEvent.ACTION_MOVE:
+                float curY = ev.getY();
+                float dy = curY - mTouchStartY; // 移动的值
+
+                if (dy >= mTouchSlop && !canChildScrollUp()) {
+                    return true;
+                }
+                break;
+        }
+
+        return super.onInterceptTouchEvent(ev);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+
+        if (!isEnabled()) {
+            return super.onTouchEvent(event);
+        }
+
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_MOVE:
+                return true;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                return true;
+            default:
+                return super.onTouchEvent(event);
+        }
+    }
+
     private boolean canChildScrollUp() {
         if (android.os.Build.VERSION.SDK_INT < 14) {
             return mListView.getScrollY() > 0;
@@ -114,6 +213,10 @@ public class RefreshLayout extends FrameLayout {
             }
         }
         return null;
+    }
+
+    public boolean isRefreshing() {
+        return yRefreshing;
     }
 
     private float d2x(float size) {
