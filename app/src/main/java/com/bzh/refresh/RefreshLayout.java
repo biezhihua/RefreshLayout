@@ -17,7 +17,6 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.LinearInterpolator;
 import android.widget.AbsListView;
 import android.widget.FrameLayout;
 
@@ -35,11 +34,13 @@ public class RefreshLayout extends FrameLayout {
 
     public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;
     public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;
+
     private float mRefreshViewMaxHeight;
     private float mRefreshViewHeight;
+    private int mRefreshViewColor;
+
     private float mTouchStartY;
     private float mTouchCurrentY;
-    private int mRefreshViewColor;
     private int mTouchSlop;
     private float oldOffsetY;
     private boolean yRefreshing;
@@ -73,15 +74,11 @@ public class RefreshLayout extends FrameLayout {
 
         mTouchSlop = ViewConfigurationCompat.getScaledPagingTouchSlop(ViewConfiguration.get(context));
 
-        initHeaderView(context, attrs);
-        initUpChildAnimation();
+        initRefreshView(context, attrs);
+        initAnimation();
     }
 
-    private void initUpChildAnimation() {
-        if (mListView == null) {
-            return;
-        }
-
+    private void initAnimation() {
         if (mUpTopAnimator == null) {
             mUpTopAnimator = ValueAnimator.ofFloat(mRefreshViewHeight, 0);
             mUpTopAnimator.setInterpolator(new DecelerateInterpolator(10));
@@ -109,19 +106,16 @@ public class RefreshLayout extends FrameLayout {
             mUpTopAnimator.cancel();
         }
 
-
-        final float upBackDistanceY = mRefreshViewMaxHeight - mRefreshViewHeight;
         mUpBackAnimator = ValueAnimator.ofFloat(mRefreshViewMaxHeight, mRefreshViewHeight);
         mUpBackAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                float val = (float) animation.getAnimatedValue();
             }
         });
         mUpBackAnimator.setDuration(500);
     }
 
-    private void initHeaderView(Context context, AttributeSet attrs) {
+    private void initRefreshView(Context context, AttributeSet attrs) {
         mRefreshRlView = new RefreshRlView(context, attrs);
         LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
         params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
