@@ -7,15 +7,22 @@
     android:orientation="vertical"
     tools:context="com.bzh.refresh.MainActivity">
 
-    <com.bzh.refresh.RefreshView
-        android:id="@+id/refreshView"
-        android:layout_width="match_parent"
-        android:layout_height="400dp"
-        android:layout_gravity="center_horizontal"/>
+    <!-- <com.bzh.refresh.RefreshView
+         android:id="@+id/refreshView"
+         android:layout_width="70dp"
+         android:layout_height="70dp"
+         android:layout_gravity="center_horizontal"/>-->
 
-    <Button
-        android:id="@+id/button1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="reset"/>
+    <com.bzh.refresh.RefreshLayout
+        android:id="@+id/refreshLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ListView
+            android:id="@+id/listView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"></ListView>
+
+    </com.bzh.refresh.RefreshLayout>
+
 </LinearLayout>

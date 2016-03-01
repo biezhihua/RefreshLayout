@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="RefreshLayout">
+        <attr name="RefreshViewColor" format="color"/>                          <!-- The arc color -->
+        <attr name="RefreshViewMaxHeight" format="float"/>                          <!-- The arc color -->
+        <attr name="RefreshViewHeight" format="float"/>                          <!-- The arc color -->
+    </declare-styleable>
+</resources>
