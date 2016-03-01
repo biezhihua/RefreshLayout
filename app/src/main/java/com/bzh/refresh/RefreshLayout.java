@@ -1,7 +1,5 @@
 package com.bzh.refresh;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -16,7 +14,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.AbsListView;
 import android.widget.FrameLayout;
 
@@ -35,15 +32,13 @@ public class RefreshLayout extends FrameLayout {
     public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;
     public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;
 
-    private float mRefreshViewMaxHeight;
-    private float mRefreshViewHeight;
+    private int mRefreshViewMaxHeight;
+    private int mRefreshViewHeight;
     private int mRefreshViewColor;
 
     private float mTouchStartY;
     private float mTouchCurrentY;
     private int mTouchSlop;
-    private float oldOffsetY;
-    private boolean yRefreshing;
     private View mListView;
     private RefreshRlView mRefreshRlView;
     private ValueAnimator mUpBackAnimator;
@@ -67,8 +62,8 @@ public class RefreshLayout extends FrameLayout {
         if (attrs != null) {
             TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.RefreshLayout, 0, 0);
             mRefreshViewColor = a.getColor(R.styleable.RefreshLayout_RefreshViewColor, ContextCompat.getColor(context, android.R.color.holo_blue_dark));
-            mRefreshViewMaxHeight = a.getDimension(R.styleable.RefreshLayout_RefreshViewMaxHeight, d2x(DEFAULT_REFRESH_VIEW_MAX_HEIGHT));
-            mRefreshViewHeight = a.getDimension(R.styleable.RefreshLayout_RefreshViewHeight, d2x(DEFAULT_REFRESH_VIEW_HEIGHT));
+            mRefreshViewMaxHeight = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewMaxHeight, d2x(DEFAULT_REFRESH_VIEW_MAX_HEIGHT));
+            mRefreshViewHeight = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewHeight, d2x(DEFAULT_REFRESH_VIEW_HEIGHT));
             a.recycle();
         }
 
@@ -79,49 +74,15 @@ public class RefreshLayout extends FrameLayout {
     }
 
     private void initAnimation() {
-        if (mUpTopAnimator == null) {
-            mUpTopAnimator = ValueAnimator.ofFloat(mRefreshViewHeight, 0);
-            mUpTopAnimator.setInterpolator(new DecelerateInterpolator(10));
-            mUpTopAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    float val = ((float) animation.getAnimatedValue());
-
-                    if (mRefreshRlView != null && mListView != null) {
-                        mListView.setTranslationY(val);
-                        mRefreshRlView.getLayoutParams().height = (int) val;
-                        mRefreshRlView.requestLayout();
-                        mRefreshRlView.setPadding(0, 0, 0, (int) (mRefreshViewHeight - val));
-                    }
-                }
-            });
-            mUpTopAnimator.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    super.onAnimationEnd(animation);
-                }
-            });
-            mUpTopAnimator.setDuration(300);
-        } else if (mUpTopAnimator.isRunning()) {
-            mUpTopAnimator.cancel();
-        }
-
-        mUpBackAnimator = ValueAnimator.ofFloat(mRefreshViewMaxHeight, mRefreshViewHeight);
-        mUpBackAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-            }
-        });
-        mUpBackAnimator.setDuration(500);
     }
 
     private void initRefreshView(Context context, AttributeSet attrs) {
         mRefreshRlView = new RefreshRlView(context, attrs);
         LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
         params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        params.height = (int) mRefreshViewHeight;
+        params.height = mRefreshViewHeight;
         mRefreshRlView.setLayoutParams(params);
-        mRefreshRlView.setPadding(0, 0, 0, (int) mRefreshViewHeight);
+        mRefreshRlView.setPadding(0, 0, 0, mRefreshViewHeight);
         super.addView(mRefreshRlView);
     }
 
@@ -136,7 +97,6 @@ public class RefreshLayout extends FrameLayout {
         if (view == null) {
             view = getRefreshView(vp);
         }
-
         if (view == null) {
             throw new IllegalArgumentException("没有可以滚动的View");
         } else {
@@ -207,10 +167,6 @@ public class RefreshLayout extends FrameLayout {
             }
         }
         return null;
-    }
-
-    public boolean isRefreshing() {
-        return yRefreshing;
     }
 
     private float d2x(float size) {
