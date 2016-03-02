@@ -49,6 +49,7 @@ class RefreshInnerLayout extends RelativeLayout {
 
     public void setTransitionProgress(float transitionProgress) {
         mRefreshView.setTransitionProgress(transitionProgress);
+
     }
 
     public void setMode(int mode) {

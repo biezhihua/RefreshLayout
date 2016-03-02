@@ -8,11 +8,12 @@ import android.content.res.TypedArray;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.AbsListView;
@@ -29,6 +30,8 @@ import android.widget.FrameLayout;
  * ========================================================== <br>
  */
 public class RefreshLayout extends FrameLayout {
+
+    public static final AccelerateDecelerateInterpolator ACCELERATE_DECELERATE_INTERPOLATOR = new AccelerateDecelerateInterpolator();
 
     public interface OnRefreshListener {
         void onRefresh();
@@ -57,8 +60,8 @@ public class RefreshLayout extends FrameLayout {
 
     private static final String TAG = "RefreshLayout";
 
-    public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 300;    // 可拖动的默认最大值
-    public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 100;         // 刷新控件的默认高度
+    public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;    // 可拖动的默认最大值
+    public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;         // 刷新控件的默认高度
 
     private int mRefreshViewMaxHeight;                  // 可拖动的最大值
     private int mRefreshViewHeight;                     // 刷新动画控件的高度
@@ -158,9 +161,10 @@ public class RefreshLayout extends FrameLayout {
                 mRefreshInnerLayout.getLayoutParams().height = (int) newMoveDistanceY;
                 requestLayout();
                 if (!mRefreshing) {
-                    float percent = newMoveDistanceY / (mRefreshViewHeight * 2);
-                    mRefreshInnerLayout.setTransitionProgress(Math.min(1, percent));
+                    float fraction = newMoveDistanceY / mRefreshViewHeight;
+                    mRefreshInnerLayout.setTransitionProgress(ACCELERATE_DECELERATE_INTERPOLATOR.getInterpolation(Math.min(1, fraction)));
                 }
+
                 return true;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -199,7 +203,6 @@ public class RefreshLayout extends FrameLayout {
                     mListView.setTranslationY(value);
                     mRefreshInnerLayout.getLayoutParams().height = (int) value;
                     requestLayout();
-//                    mRefreshInnerLayout.setPadding(0, 0, 0, (int) (mRefreshViewHeight - value));
                 }
             });
             mRefreshViewBackTopAnim.addListener(new AnimatorListenerAdapter() {
@@ -228,7 +231,6 @@ public class RefreshLayout extends FrameLayout {
                     mListView.setTranslationY(value);
                     mRefreshInnerLayout.getLayoutParams().height = (int) value;
                     requestLayout();
-
                     if (!mRefreshing) {
                         float percent = (value - mRefreshViewHeight) / (mRefreshViewMaxHeight - mRefreshViewHeight);
                         mRefreshInnerLayout.setTransitionProgress(1 - percent);
@@ -267,8 +269,9 @@ public class RefreshLayout extends FrameLayout {
 
     private void startBackTopAnim() {
         if (mBackTopAnim == null) {
-            mBackTopAnim = ValueAnimator.ofFloat(mRefreshViewHeight, 0);
-            mBackTopAnim.setInterpolator(new DecelerateInterpolator());
+            mBackTopAnim = ValueAnimator.ofFloat(0);
+            mBackTopAnim.setFloatValues(mRefreshViewHeight, 0);
+            mBackTopAnim.setInterpolator(ACCELERATE_DECELERATE_INTERPOLATOR);
             mBackTopAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
                 public void onAnimationUpdate(ValueAnimator animation) {
@@ -276,7 +279,6 @@ public class RefreshLayout extends FrameLayout {
                     mListView.setTranslationY(value);
                     mRefreshInnerLayout.getLayoutParams().height = (int) value;
                     requestLayout();
-//                    mRefreshInnerLayout.setPadding(0, 0, 0, mRefreshViewHeight - Math.round(value));
                 }
             });
             mBackTopAnim.addListener(new AnimatorListenerAdapter() {
@@ -290,6 +292,7 @@ public class RefreshLayout extends FrameLayout {
         } else if (mBackTopAnim.isRunning()) {
             mBackTopAnim.cancel();
         }
+        mBackTopAnim.setFloatValues(mListView.getTranslationY(), 0);
         mBackTopAnim.start();
     }
 

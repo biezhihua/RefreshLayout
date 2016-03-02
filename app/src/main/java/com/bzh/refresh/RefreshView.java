@@ -12,6 +12,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
@@ -98,7 +99,7 @@ class RefreshView extends View {
         if (attrs != null) {
             TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.RefreshLayout, 0, 0);
             mColor = a.getColor(R.styleable.RefreshLayout_RefreshViewColor, ContextCompat.getColor(context, android.R.color.holo_blue_dark));
-            mSize = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewHeight, d2x(RefreshLayout.DEFAULT_REFRESH_VIEW_HEIGHT));
+            mRefreshViewHeight = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewHeight, d2x(RefreshLayout.DEFAULT_REFRESH_VIEW_HEIGHT));
             a.recycle();
         }
     }
@@ -126,6 +127,8 @@ class RefreshView extends View {
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(mColor);
 
+        Log.d(TAG,"drawStateContent() called with: " + "mTransitionProgress = [" + mTransitionProgress + "]");
+
         switch (mCurrentMode) {
             case MODE_NONE: {
                 drawDefaultRectangle(canvas);
@@ -140,12 +143,13 @@ class RefreshView extends View {
                 drawSetup1LeftPath(canvas, setup1TransitionProgress);
                 drawSetup1RightPath(canvas, setup1TransitionProgress);
 
-                if (mTransitionProgress > RATIO_MODE_SETUP_1) {
+                if (mTransitionProgress >= RATIO_MODE_SETUP_1) {
                     mCurrentMode = MODE_SETUP_2;
                 }
             }
             break;
             case MODE_SETUP_2: {
+
                 if (mTransitionProgress < RATIO_MODE_SETUP_1) {
                     mCurrentMode = MODE_SETUP_1;
                 }
@@ -164,7 +168,7 @@ class RefreshView extends View {
                 drawSetup2LeftPath(canvas, setup2TransitionProgress, base, opposite);
                 drawSetup2RightPath(canvas, setup2TransitionProgress, base, opposite);
 
-                if (mTransitionProgress > RATIO_MODE_SETUP_2) {
+                if (mTransitionProgress >= RATIO_MODE_SETUP_2) {
                     mCurrentMode = MODE_SETUP_3;
                 }
             }
