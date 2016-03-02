@@ -8,7 +8,6 @@ import android.content.res.TypedArray;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,7 +30,6 @@ import android.widget.FrameLayout;
  */
 public class RefreshLayout extends FrameLayout {
 
-    public static final AccelerateDecelerateInterpolator ACCELERATE_DECELERATE_INTERPOLATOR = new AccelerateDecelerateInterpolator();
 
     public interface OnRefreshListener {
         void onRefresh();
@@ -59,7 +57,7 @@ public class RefreshLayout extends FrameLayout {
     }
 
     private static final String TAG = "RefreshLayout";
-
+    public static final AccelerateDecelerateInterpolator ACCELERATE_DECELERATE_INTERPOLATOR = new AccelerateDecelerateInterpolator();
     public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;    // 可拖动的默认最大值
     public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;         // 刷新控件的默认高度
 
@@ -77,7 +75,6 @@ public class RefreshLayout extends FrameLayout {
     private ValueAnimator mBackRefreshViewHeightAnim;   // 返回到刷新控件高度的动画
     private ValueAnimator mRefreshViewBackTopAnim;      // 从刷新控件高度返回到顶部的动画
     private ValueAnimator mBackTopAnim;                 // 从刷新控件尚未显示完全的位置返回到顶部的动画
-
 
     public RefreshLayout(Context context) {
         this(context, null);
@@ -271,7 +268,7 @@ public class RefreshLayout extends FrameLayout {
         if (mBackTopAnim == null) {
             mBackTopAnim = ValueAnimator.ofFloat(0);
             mBackTopAnim.setFloatValues(mRefreshViewHeight, 0);
-            mBackTopAnim.setInterpolator(ACCELERATE_DECELERATE_INTERPOLATOR);
+            mBackTopAnim.setInterpolator(new DecelerateInterpolator());
             mBackTopAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
                 public void onAnimationUpdate(ValueAnimator animation) {

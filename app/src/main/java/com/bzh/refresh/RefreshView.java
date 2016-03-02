@@ -12,7 +12,6 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
@@ -46,22 +45,24 @@ class RefreshView extends View {
     public static final int GAP = 4;
     private static final String TAG = "RefreshView";
 
-    private int mSize;                              // View尺寸
+    private RefreshLayout.OnRefreshListener mListener;
+
     private float mMLegWidth;                       // M腿的宽度
     private float mRectangleWidth;                  // 初始矩形的宽度
-    private int mViewCenter;                        // View中心点
     private float mTransitionProgress;              // 动画进度 0.0 - 1.0
-    private int mCurrentMode = MODE_NONE;           // 当前绘画进度
     private float mMArmWidth;                       // M手臂的宽度
-    private RefreshLayout.OnRefreshListener mListener;
+    private int mSize;                              // View尺寸
+    private int mColor;                             // 默认颜色
+    private int mViewCenter;                        // View中心点
+    private int mCurrentMode = MODE_NONE;           // 当前绘画进度
+
     private Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Path mLeftPath = new Path();
     private Path mRightPath = new Path();
     private Path mLeftMArmPath = new Path();
     private Path mRightMArmPath = new Path();
-    private int mColor;                             // 默认颜色
-    //    private ValueAnimator mReduceMLegHeightAnim;
-    private ValueAnimator mResetThreeSquareAnim;
+
+    private ValueAnimator mResetThreeSquareAnim;    // 摆放三个点
 
     private ValueAnimator mLeftLoadingAnim;         // 加载动画-左侧点的相关参数
     private float leftSquareX;
@@ -120,28 +121,29 @@ class RefreshView extends View {
 
         drawStateContent(canvas);
 
-//        drawOuterSquare(canvas);
+        drawOuterSquare(canvas);
     }
 
     private void drawStateContent(Canvas canvas) {
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(mColor);
 
-        Log.d(TAG,"drawStateContent() called with: " + "mTransitionProgress = [" + mTransitionProgress + "]");
-
         switch (mCurrentMode) {
             case MODE_NONE: {
                 drawDefaultRectangle(canvas);
+
                 mCurrentMode = MODE_SETUP_1;
             }
             break;
             case MODE_SETUP_1: {
 
+                // 将 0 ~ 0.33 内的值变换为 0 ~ 1.0的值
                 final float setup1Progress = mTransitionProgress - RATIO_MODE_SETUP_0;
                 final float setup1TransitionProgress = setup1Progress * RATIO_MODE_ROOT;
 
-                drawSetup1LeftPath(canvas, setup1TransitionProgress);
-                drawSetup1RightPath(canvas, setup1TransitionProgress);
+                drawLeftIncreaseTrapezoidPath(canvas, setup1TransitionProgress);
+
+                drawRightIncreaseTrapezoidPath(canvas, setup1TransitionProgress);
 
                 if (mTransitionProgress >= RATIO_MODE_SETUP_1) {
                     mCurrentMode = MODE_SETUP_2;
@@ -150,13 +152,17 @@ class RefreshView extends View {
             break;
             case MODE_SETUP_2: {
 
+                // 低于临界值则返回到上一步
                 if (mTransitionProgress < RATIO_MODE_SETUP_1) {
                     mCurrentMode = MODE_SETUP_1;
+                    return;
                 }
 
+                // 将 0.33 ~ 0.66 内的值变换为 0 ~ 1.0的值
                 float setup2Progress = mTransitionProgress - RATIO_MODE_SETUP_1;
                 float setup2TransitionProgress = setup2Progress * RATIO_MODE_ROOT;
 
+                // 根据两点得道底边和对边
                 float x1 = mViewCenter + mRectangleWidth / 2;
                 float y1 = mViewCenter - mRectangleWidth / 2 - d2x(GAP);
                 float x2 = mMLegWidth;
@@ -165,9 +171,11 @@ class RefreshView extends View {
                 float base = getBase(getAngle(y1 - y2, x1 - x2), getHypotenuse(y1 - y2, x1 - x2));
                 float opposite = getOpposite(getAngle(y1 - y2, x1 - x2), getHypotenuse(y1 - y2, x1 - x2));
 
-                drawSetup2LeftPath(canvas, setup2TransitionProgress, base, opposite);
-                drawSetup2RightPath(canvas, setup2TransitionProgress, base, opposite);
+                drawLeftReduceTrapezoidPath(canvas, setup2TransitionProgress, base, opposite);
 
+                drawRightReduceTrapezoidPath(canvas, setup2TransitionProgress, base, opposite);
+
+                // 超出临界值则进入下一步
                 if (mTransitionProgress >= RATIO_MODE_SETUP_2) {
                     mCurrentMode = MODE_SETUP_3;
                 }
@@ -175,50 +183,48 @@ class RefreshView extends View {
             break;
             case MODE_SETUP_3: {
 
+                // 低于临界值则返回到上一步
                 if (mTransitionProgress < RATIO_MODE_SETUP_2) {
                     mCurrentMode = MODE_SETUP_2;
+                    return;
                 }
 
+                // 将 0.66 ~ 0.99 内的值变换为 0 ~ 1.0的值
                 float setup3Progress = mTransitionProgress - RATIO_MODE_SETUP_2;
-
                 float setup3TransitionProgress = setup3Progress * RATIO_MODE_ROOT;
 
                 drawLeftMLeg(canvas);
 
                 drawRightMLeg(canvas);
 
-                drawLeftMArmPath(canvas, setup3TransitionProgress);
+                drawLeftIncreaseMArmPath(canvas, setup3TransitionProgress);
 
-                drawRightMArmPath(canvas, setup3TransitionProgress);
+                drawRightIncreaseMArmPath(canvas, setup3TransitionProgress);
 
             }
             break;
             case MODE_SETUP_4: {
 
+                // 根据进度得到M“腿”的高度
                 float legHeight = mSize - mTransitionProgress * (mSize - mMLegWidth);
 
                 drawLeftMLeg(canvas, legHeight);
 
                 drawRightMLeg(canvas, legHeight);
 
-                drawReduceLeftMArmPath(canvas, mTransitionProgress);
+                drawLeftReduceMArmPath(canvas, mTransitionProgress);
 
-                drawReduceRightMArmPath(canvas, mTransitionProgress);
+                drawRightReduceMArmPath(canvas, mTransitionProgress);
 
                 if (mTransitionProgress >= 0.9f) {
                     float centerX = mViewCenter;
                     float centerY = mViewCenter + mMLegWidth / 2;
                     drawSquare(canvas, centerX, centerY, mPaint);
                 }
-
-//                if (mTransitionProgress >= 1.0f) {
-//                    mCurrentMode = MODE_SETUP_5;
-//                    startResetThreeSquareAnim();
-//                    postInvalidate();
-//                }
             }
             break;
             case MODE_SETUP_5: {
+
                 float endY = 0;
 
                 // 画中心的正方形点
@@ -284,8 +290,6 @@ class RefreshView extends View {
                 if (mCurrentMode != MODE_SETUP_4) {
                     mCurrentMode = MODE_SETUP_4;
                 }
-//                startReduceMLegHeightAnim();
-//                postInvalidate();
                 break;
             case MODE_SETUP_5:
                 if (mCurrentMode != MODE_SETUP_5) {
@@ -295,25 +299,6 @@ class RefreshView extends View {
                 break;
         }
     }
-
-//    private void startReduceMLegHeightAnim() {
-//        if (mReduceMLegHeightAnim == null) {
-//            mReduceMLegHeightAnim = ValueAnimator.ofFloat(TRANSITION_END_VAL);
-//            mReduceMLegHeightAnim.setFloatValues(TRANSITION_START_VAL, TRANSITION_END_VAL);
-//            mReduceMLegHeightAnim.setDuration(TRANSITION_ANIM_DURATION);
-//            mReduceMLegHeightAnim.setInterpolator(new DecelerateInterpolator());
-//            mReduceMLegHeightAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-//                @Override
-//                public void onAnimationUpdate(ValueAnimator animation) {
-//                    mTransitionProgress = (float) animation.getAnimatedValue();
-//                    postInvalidate();
-//                }
-//            });
-//        } else if (mReduceMLegHeightAnim.isRunning()) {
-//            mReduceMLegHeightAnim.cancel();
-//        }
-//        mReduceMLegHeightAnim.start();
-//    }
 
     private void startResetThreeSquareAnim() {
         if (mResetThreeSquareAnim == null) {
@@ -441,13 +426,16 @@ class RefreshView extends View {
         mRightLoadingAnim.start();
     }
 
+    /**
+     * 画一个小正方形
+     */
     private void drawSquare(Canvas canvas, float centerX, float centerY, Paint paint) {
         RectF rectF = new RectF();
         rectF.set(centerX - mMLegWidth / 2, centerY - mMLegWidth / 2, centerX + mMLegWidth / 2, centerY + mMLegWidth / 2);
         canvas.drawRect(rectF, paint);
     }
 
-    private void drawReduceRightMArmPath(Canvas canvas, float transitionProgress) {
+    private void drawRightReduceMArmPath(Canvas canvas, float transitionProgress) {
 
         // 计算左平行线的斜率/斜边/底边/对边/角度
         float leftX1 = mViewCenter - mMArmWidth;
@@ -488,7 +476,10 @@ class RefreshView extends View {
         canvas.drawPath(mRightMArmPath, mPaint);
     }
 
-    private void drawReduceLeftMArmPath(Canvas canvas, float transitionProgress) {
+    /**
+     * 画左侧的M"臂"
+     */
+    private void drawLeftReduceMArmPath(Canvas canvas, float transitionProgress) {
 
         // 计算左平行线的斜率/斜边/底边/对边/角度
         float leftX1 = mViewCenter - mMArmWidth;
@@ -548,7 +539,10 @@ class RefreshView extends View {
         canvas.drawPath(mLeftPath, mPaint);
     }
 
-    private void drawRightMArmPath(Canvas canvas, float transitionProgress) {
+    /**
+     * 画右侧M“臂”
+     */
+    private void drawRightIncreaseMArmPath(Canvas canvas, float transitionProgress) {
 
         // 计算左平行线的斜率/斜边/底边/对边/角度
         float leftX1 = mViewCenter - mMArmWidth;
@@ -589,7 +583,10 @@ class RefreshView extends View {
         canvas.drawPath(mRightMArmPath, mPaint);
     }
 
-    private void drawLeftMArmPath(Canvas canvas, float transitionProgress) {
+    /**
+     * 画左侧M“臂”
+     */
+    private void drawLeftIncreaseMArmPath(Canvas canvas, float transitionProgress) {
         // 计算左平行线的斜率/斜边/底边/对边/角度
         float leftX1 = mViewCenter - mMArmWidth;
         float leftY1 = mViewCenter + mMArmWidth;
@@ -653,7 +650,10 @@ class RefreshView extends View {
         canvas.drawPath(mLeftPath, mPaint);
     }
 
-    private void drawSetup2RightPath(Canvas canvas, float transitionProgress, float base, float opposite) {
+    /**
+     * 画右侧的梯形
+     */
+    private void drawRightReduceTrapezoidPath(Canvas canvas, float transitionProgress, float base, float opposite) {
 
         float rightTopX = mSize;
         float rightTopY = 0;
@@ -674,7 +674,10 @@ class RefreshView extends View {
         canvas.drawPath(mRightPath, mPaint);
     }
 
-    private void drawSetup2LeftPath(Canvas canvas, float transitionProgress, float base, float opposite) {
+    /**
+     * 画左侧的梯形
+     */
+    private void drawLeftReduceTrapezoidPath(Canvas canvas, float transitionProgress, float base, float opposite) {
 
         float rightBottomX = mViewCenter + mRectangleWidth / 2 - (base * transitionProgress);
         float rightBottomY = mViewCenter - mRectangleWidth / 2 - d2x(GAP) - (opposite * transitionProgress);
@@ -693,7 +696,10 @@ class RefreshView extends View {
         canvas.drawPath(mLeftPath, mPaint);
     }
 
-    private void drawSetup1RightPath(Canvas canvas, float transitionProgress) {
+    /**
+     * 画右侧的梯形
+     */
+    private void drawRightIncreaseTrapezoidPath(Canvas canvas, float transitionProgress) {
 
         // 由于整个View是正方形，直角三角形两边相等，所以不需要进行特殊的数学计算
         float leftTopX = mViewCenter - mRectangleWidth / 2;
@@ -712,7 +718,10 @@ class RefreshView extends View {
         canvas.drawPath(mRightPath, mPaint);
     }
 
-    private void drawSetup1LeftPath(Canvas canvas, float transitionProgress) {
+    /**
+     * 画左侧的梯形
+     */
+    private void drawLeftIncreaseTrapezoidPath(Canvas canvas, float transitionProgress) {
 
         // 由于整个View是正方形，直角三角形两边相等，所以不需要进行特殊的数学计算
         float rightTopX = mViewCenter + mRectangleWidth / 2;
@@ -731,12 +740,18 @@ class RefreshView extends View {
         canvas.drawPath(mLeftPath, mPaint);
     }
 
+    /**
+     * 画一个初始矩形
+     */
     private void drawDefaultRectangle(Canvas canvas) {
         RectF noneRectF = new RectF();
         noneRectF.set(mViewCenter - mRectangleWidth / 2, 0, mViewCenter + mRectangleWidth / 2, mSize);
         canvas.drawRect(noneRectF, mPaint);
     }
 
+    /**
+     * 画一个测试使用的正方形
+     */
     private void drawOuterSquare(Canvas canvas) {
 
         // Draw the outer square for the test
@@ -751,11 +766,17 @@ class RefreshView extends View {
         canvas.drawLine(0, mSize, mSize, 0, mPaint);
     }
 
+    /**
+     * 重置画笔
+     */
     private void resetPaint() {
         mPaint.reset();
         mPaint.setAntiAlias(true);
     }
 
+    /**
+     * 重置路径
+     */
     private void resetPath() {
         mLeftPath.reset();
         mRightPath.reset();
@@ -763,19 +784,21 @@ class RefreshView extends View {
         mRightMArmPath.reset();
     }
 
+    /**
+     * 初始化相关参数
+     */
     private void initializeValues() {
-        mSize = mRefreshViewHeight;
-        mViewCenter = mSize / 2;
-        mRectangleWidth = mSize / RATIO_MODE_NONE_RECTANGLE_WIDTH;
-        mMLegWidth = mSize / RATIO_LEG_WIDTH;
-        mMArmWidth = mMLegWidth / FACTOR_M_LEG;
+        mSize = mRefreshViewHeight;                                 // 初始化View大小
+        mViewCenter = mSize / 2;                                    // 初始化中心点
+        mRectangleWidth = mSize / RATIO_MODE_NONE_RECTANGLE_WIDTH;  // 初始化初始中心矩形的宽度为M腿宽度的一倍
+        mMLegWidth = mSize / RATIO_LEG_WIDTH;                       // 初始化M"腿"的宽度
+        mMArmWidth = mMLegWidth / FACTOR_M_LEG;                     // 初始化M"臂"的宽度
     }
 
+    /**
+     * 重置数据等相关参数，并会重新初始化数据
+     */
     public void resetValues() {
-
-//        if (mReduceMLegHeightAnim != null) {
-//            mReduceMLegHeightAnim.cancel();
-//        }
 
         if (mResetThreeSquareAnim != null) {
             mResetThreeSquareAnim.cancel();
@@ -817,6 +840,9 @@ class RefreshView extends View {
         initializeValues();
     }
 
+    /**
+     * @param transitionProgress 进度，是一个0 ~ 1间的值
+     */
     public void setTransitionProgress(float transitionProgress) {
         mTransitionProgress = transitionProgress;
         postInvalidate();
