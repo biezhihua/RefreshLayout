@@ -21,7 +21,6 @@ import android.widget.RelativeLayout;
 class RefreshInnerLayout extends RelativeLayout {
 
     private int mRefreshViewHeight;
-    private int mRefreshViewColor;
     private RefreshView mRefreshView;
 
     public RefreshInnerLayout(Context context) {
@@ -37,18 +36,16 @@ class RefreshInnerLayout extends RelativeLayout {
 
         if (attrs != null) {
             TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.RefreshLayout, 0, 0);
-            mRefreshViewColor = a.getColor(R.styleable.RefreshLayout_RefreshViewColor, ContextCompat.getColor(context, android.R.color.holo_blue_dark));
             mRefreshViewHeight = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewHeight, d2x(RefreshLayout.DEFAULT_REFRESH_VIEW_HEIGHT));
             a.recycle();
         }
 
-        mRefreshView = new RefreshView(getContext());
+        mRefreshView = new RefreshView(getContext(), attrs);
         LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.addRule(RelativeLayout.CENTER_IN_PARENT);
         params.height = mRefreshViewHeight;
         params.width = mRefreshViewHeight;
         mRefreshView.setLayoutParams(params);
-        mRefreshView.setColor(mRefreshViewColor);
         addView(mRefreshView);
     }
 

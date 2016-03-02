@@ -4,16 +4,17 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.DecelerateInterpolator;
 
 /**
  * Created by biezhihua on 16-2-28.
@@ -42,6 +43,7 @@ class RefreshView extends View {
     public static final float RATIO_MODE_SETUP_2 = 1.0f / RATIO_MODE_ROOT * 2;
     public static final float RATIO_MODE_SETUP_3 = 1.0f / RATIO_MODE_ROOT * 3;
     public static final int GAP = 4;
+    private static final String TAG = "RefreshView";
 
     private int mSize;                              // View尺寸
     private float mMLegWidth;                       // M腿的宽度
@@ -57,7 +59,7 @@ class RefreshView extends View {
     private Path mLeftMArmPath = new Path();
     private Path mRightMArmPath = new Path();
     private int mColor;                             // 默认颜色
-    private ValueAnimator mReduceMLegHeightAnim;
+    //    private ValueAnimator mReduceMLegHeightAnim;
     private ValueAnimator mResetThreeSquareAnim;
 
     private ValueAnimator mLeftLoadingAnim;         // 加载动画-左侧点的相关参数
@@ -80,6 +82,8 @@ class RefreshView extends View {
     private float mRightSquareProgress;
     private boolean isRightReverse;
 
+    private int mRefreshViewHeight;
+
     public RefreshView(Context context) {
         this(context, null);
     }
@@ -90,6 +94,13 @@ class RefreshView extends View {
 
     public RefreshView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+
+        if (attrs != null) {
+            TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.RefreshLayout, 0, 0);
+            mColor = a.getColor(R.styleable.RefreshLayout_RefreshViewColor, ContextCompat.getColor(context, android.R.color.holo_blue_dark));
+            mSize = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewHeight, d2x(RefreshLayout.DEFAULT_REFRESH_VIEW_HEIGHT));
+            a.recycle();
+        }
     }
 
     @Override
@@ -149,12 +160,16 @@ class RefreshView extends View {
                 drawSetup2LeftPath(canvas, setup2TransitionProgress, base, opposite);
                 drawSetup2RightPath(canvas, setup2TransitionProgress, base, opposite);
 
-                if (mTransitionProgress >= RATIO_MODE_SETUP_2) {
+                if (mTransitionProgress > RATIO_MODE_SETUP_2) {
                     mCurrentMode = MODE_SETUP_3;
                 }
             }
             break;
             case MODE_SETUP_3: {
+
+                if (mTransitionProgress < RATIO_MODE_SETUP_2) {
+                    mCurrentMode = MODE_SETUP_2;
+                }
 
                 float setup3Progress = mTransitionProgress - RATIO_MODE_SETUP_2;
 
@@ -273,24 +288,24 @@ class RefreshView extends View {
         }
     }
 
-    private void startReduceMLegHeightAnim() {
-        if (mReduceMLegHeightAnim == null) {
-            mReduceMLegHeightAnim = ValueAnimator.ofFloat(TRANSITION_END_VAL);
-            mReduceMLegHeightAnim.setFloatValues(TRANSITION_START_VAL, TRANSITION_END_VAL);
-            mReduceMLegHeightAnim.setDuration(TRANSITION_ANIM_DURATION);
-            mReduceMLegHeightAnim.setInterpolator(new DecelerateInterpolator());
-            mReduceMLegHeightAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    mTransitionProgress = (float) animation.getAnimatedValue();
-                    postInvalidate();
-                }
-            });
-        } else if (mReduceMLegHeightAnim.isRunning()) {
-            mReduceMLegHeightAnim.cancel();
-        }
-        mReduceMLegHeightAnim.start();
-    }
+//    private void startReduceMLegHeightAnim() {
+//        if (mReduceMLegHeightAnim == null) {
+//            mReduceMLegHeightAnim = ValueAnimator.ofFloat(TRANSITION_END_VAL);
+//            mReduceMLegHeightAnim.setFloatValues(TRANSITION_START_VAL, TRANSITION_END_VAL);
+//            mReduceMLegHeightAnim.setDuration(TRANSITION_ANIM_DURATION);
+//            mReduceMLegHeightAnim.setInterpolator(new DecelerateInterpolator());
+//            mReduceMLegHeightAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//                @Override
+//                public void onAnimationUpdate(ValueAnimator animation) {
+//                    mTransitionProgress = (float) animation.getAnimatedValue();
+//                    postInvalidate();
+//                }
+//            });
+//        } else if (mReduceMLegHeightAnim.isRunning()) {
+//            mReduceMLegHeightAnim.cancel();
+//        }
+//        mReduceMLegHeightAnim.start();
+//    }
 
     private void startResetThreeSquareAnim() {
         if (mResetThreeSquareAnim == null) {
@@ -741,7 +756,6 @@ class RefreshView extends View {
     }
 
     private void initializeValues() {
-        mSize = Math.min(getMeasuredHeight(), getMeasuredWidth());
         mViewCenter = mSize / 2;
         mRectangleWidth = mSize / RATIO_MODE_NONE_RECTANGLE_WIDTH;
         mMLegWidth = mSize / RATIO_LEG_WIDTH;
@@ -750,9 +764,10 @@ class RefreshView extends View {
 
     public void resetValues() {
 
-        if (mReduceMLegHeightAnim != null) {
-            mReduceMLegHeightAnim.cancel();
-        }
+//        if (mReduceMLegHeightAnim != null) {
+//            mReduceMLegHeightAnim.cancel();
+//        }
+
         if (mResetThreeSquareAnim != null) {
             mResetThreeSquareAnim.cancel();
         }
@@ -796,10 +811,6 @@ class RefreshView extends View {
     public void setTransitionProgress(float transitionProgress) {
         mTransitionProgress = transitionProgress;
         postInvalidate();
-    }
-
-    public void setColor(int color) {
-        this.mColor = color;
     }
 
     private float d2x(float size) {
