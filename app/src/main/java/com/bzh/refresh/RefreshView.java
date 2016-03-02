@@ -4,13 +4,11 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
-import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.View;
@@ -20,7 +18,7 @@ import android.view.animation.DecelerateInterpolator;
 /**
  * Created by biezhihua on 16-2-28.
  */
-public class RefreshView extends View {
+class RefreshView extends View {
 
     public static final float TRANSITION_START_VAL = 0.0f;
     public static final float TRANSITION_END_VAL = 1.0f;
@@ -52,7 +50,7 @@ public class RefreshView extends View {
     private float mTransitionProgress;              // 动画进度 0.0 - 1.0
     private int mCurrentMode = MODE_NONE;           // 当前绘画进度
     private float mMArmWidth;                       // M手臂的宽度
-    private OnRefreshListener mListener;
+    private RefreshLayout.OnRefreshListener mListener;
     private Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Path mLeftPath = new Path();
     private Path mRightPath = new Path();
@@ -110,7 +108,7 @@ public class RefreshView extends View {
 
         drawStateContent(canvas);
 
-        drawOuterSquare(canvas);
+//        drawOuterSquare(canvas);
     }
 
     private void drawStateContent(Canvas canvas) {
@@ -170,11 +168,6 @@ public class RefreshView extends View {
 
                 drawRightMArmPath(canvas, setup3TransitionProgress);
 
-                if (mTransitionProgress >= RATIO_MODE_SETUP_3) {
-                    mCurrentMode = MODE_SETUP_4;
-                    startReduceMLegHeightAnim();
-                    postInvalidate();
-                }
             }
             break;
             case MODE_SETUP_4: {
@@ -195,11 +188,11 @@ public class RefreshView extends View {
                     drawSquare(canvas, centerX, centerY, mPaint);
                 }
 
-                if (mTransitionProgress >= 1.0f) {
-                    mCurrentMode = MODE_SETUP_5;
-                    startResetThreeSquareAnim();
-                    postInvalidate();
-                }
+//                if (mTransitionProgress >= 1.0f) {
+//                    mCurrentMode = MODE_SETUP_5;
+//                    startResetThreeSquareAnim();
+//                    postInvalidate();
+//                }
             }
             break;
             case MODE_SETUP_5: {
@@ -259,6 +252,24 @@ public class RefreshView extends View {
                 }
             }
             break;
+        }
+    }
+
+    public void setMode(int mode) {
+        switch (mode) {
+            case MODE_SETUP_4:
+                if (mCurrentMode != MODE_SETUP_4) {
+                    mCurrentMode = MODE_SETUP_4;
+                }
+//                startReduceMLegHeightAnim();
+//                postInvalidate();
+                break;
+            case MODE_SETUP_5:
+                if (mCurrentMode != MODE_SETUP_5) {
+                    mCurrentMode = MODE_SETUP_5;
+                    startResetThreeSquareAnim();
+                }
+                break;
         }
     }
 
@@ -841,11 +852,7 @@ public class RefreshView extends View {
         return (float) Math.sqrt(Math.abs(y * y) + Math.abs(x * x));
     }
 
-    public void setOnRefreshListener(OnRefreshListener listener) {
+    public void setOnRefreshListener(RefreshLayout.OnRefreshListener listener) {
         mListener = listener;
-    }
-
-    public interface OnRefreshListener {
-        void onRefresh();
     }
 }

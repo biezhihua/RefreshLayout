@@ -18,21 +18,21 @@ import android.widget.RelativeLayout;
  * <b>修订历史</b>：　<br>
  * ========================================================== <br>
  */
-public class RefreshRlView extends RelativeLayout {
+class RefreshInnerLayout extends RelativeLayout {
 
     private int mRefreshViewHeight;
     private int mRefreshViewColor;
     private RefreshView mRefreshView;
 
-    public RefreshRlView(Context context) {
+    public RefreshInnerLayout(Context context) {
         this(context, null);
     }
 
-    public RefreshRlView(Context context, AttributeSet attrs) {
+    public RefreshInnerLayout(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public RefreshRlView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public RefreshInnerLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
         if (attrs != null) {
@@ -50,6 +50,22 @@ public class RefreshRlView extends RelativeLayout {
         mRefreshView.setLayoutParams(params);
         mRefreshView.setColor(mRefreshViewColor);
         addView(mRefreshView);
+    }
+
+    public void setTransitionProgress(float transitionProgress) {
+        mRefreshView.setTransitionProgress(transitionProgress);
+    }
+
+    public void setMode(int mode) {
+        mRefreshView.setMode(mode);
+    }
+
+    public void setOnRefreshListener(RefreshLayout.OnRefreshListener listener) {
+        mRefreshView.setOnRefreshListener(listener);
+    }
+
+    public void resetValues() {
+        mRefreshView.resetValues();
     }
 
     private float d2x(float size) {

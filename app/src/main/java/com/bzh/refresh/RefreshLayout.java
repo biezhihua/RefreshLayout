@@ -1,19 +1,20 @@
 package com.bzh.refresh;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewCompat;
-import android.support.v4.view.ViewConfigurationCompat;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.widget.AbsListView;
 import android.widget.FrameLayout;
 
@@ -29,20 +30,26 @@ import android.widget.FrameLayout;
  */
 public class RefreshLayout extends FrameLayout {
 
-    public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;
-    public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;
+    private static final String TAG = "RefreshLayout";
 
-    private int mRefreshViewMaxHeight;
-    private int mRefreshViewHeight;
-    private int mRefreshViewColor;
+    public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;    // 可拖动的默认最大值
+    public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;         // 刷新控件的默认高度
 
-    private float mTouchStartY;
-    private float mTouchCurrentY;
-    private int mTouchSlop;
-    private View mListView;
-    private RefreshRlView mRefreshRlView;
-    private ValueAnimator mUpBackAnimator;
-    private ValueAnimator mUpTopAnimator;
+    private int mRefreshViewMaxHeight;                  // 可拖动的最大值
+    private int mRefreshViewHeight;                     // 刷新动画控件的高度
+
+    private boolean mRefreshing;                        // 是否处于刷新状态
+    private boolean isDragRefresh;                      // 是否时手势拖动刷新，非手势拖动刷新不响应回调事件
+
+    private float mTouchStartY;                         // 开始触摸的Y点
+    private float mTouchCurrentY;                       // 当前触摸的Y点  mTouchCurrentY - mTouchStartY 相减得 移动的距离
+    private float mPreListViewY;                        // 记录的mListView在Y轴的偏移量，如果不为0，说明mListView控件已经下移，那么再次响应DOWN事件时，应该加上该偏移量。
+    private View mListView;                             // 可滑动的列表：ListView 或者 RecyclerView
+    private RefreshInnerLayout mRefreshInnerLayout;     // 刷新动画的控件
+    private ValueAnimator mBackRefreshViewHeightAnim;   // 返回到刷新控件高度的动画
+    private ValueAnimator mRefreshViewBackTopAnim;      // 从刷新控件高度返回到顶部的动画
+    private ValueAnimator mBackTopAnim;                 // 从刷新控件尚未显示完全的位置返回到顶部的动画
+    private OnRefreshListener mListener;
 
     public RefreshLayout(Context context) {
         this(context, null);
@@ -61,13 +68,10 @@ public class RefreshLayout extends FrameLayout {
 
         if (attrs != null) {
             TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.RefreshLayout, 0, 0);
-            mRefreshViewColor = a.getColor(R.styleable.RefreshLayout_RefreshViewColor, ContextCompat.getColor(context, android.R.color.holo_blue_dark));
             mRefreshViewMaxHeight = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewMaxHeight, d2x(DEFAULT_REFRESH_VIEW_MAX_HEIGHT));
             mRefreshViewHeight = (int) a.getDimension(R.styleable.RefreshLayout_RefreshViewHeight, d2x(DEFAULT_REFRESH_VIEW_HEIGHT));
             a.recycle();
         }
-
-        mTouchSlop = ViewConfigurationCompat.getScaledPagingTouchSlop(ViewConfiguration.get(context));
 
         initRefreshView(context, attrs);
         initAnimation();
@@ -77,13 +81,13 @@ public class RefreshLayout extends FrameLayout {
     }
 
     private void initRefreshView(Context context, AttributeSet attrs) {
-        mRefreshRlView = new RefreshRlView(context, attrs);
+        mRefreshInnerLayout = new RefreshInnerLayout(context, attrs);
         LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
         params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         params.height = mRefreshViewHeight;
-        mRefreshRlView.setLayoutParams(params);
-        mRefreshRlView.setPadding(0, 0, 0, mRefreshViewHeight);
-        super.addView(mRefreshRlView);
+        mRefreshInnerLayout.setLayoutParams(params);
+        mRefreshInnerLayout.setPadding(0, 0, 0, mRefreshViewHeight);
+        super.addView(mRefreshInnerLayout);
     }
 
     @Override
@@ -116,10 +120,8 @@ public class RefreshLayout extends FrameLayout {
                 mTouchCurrentY = mTouchStartY;
                 break;
             case MotionEvent.ACTION_MOVE:
-                float curY = ev.getY();
-                float dy = curY - mTouchStartY; // 移动的值
-
-                if (dy >= mTouchSlop && !canChildScrollUp()) {
+                float dy = ev.getY() - mTouchStartY;
+                if (dy >= 0 && !canChildScrollUp()) {
                     return true;
                 }
                 break;
@@ -137,13 +139,137 @@ public class RefreshLayout extends FrameLayout {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
+                mTouchCurrentY = event.getY();
+                float moveDistanceY = Math.max(0, Math.min(mRefreshViewMaxHeight, mTouchCurrentY - mTouchStartY));
+                float newMoveDistanceY = Math.round(Math.min(mRefreshViewMaxHeight, mPreListViewY + moveDistanceY)); // 加上之前的偏移量
+                mListView.setTranslationY(newMoveDistanceY);
+                mRefreshInnerLayout.getLayoutParams().height = (int) newMoveDistanceY;
+                mRefreshInnerLayout.setPadding(0, 0, 0, (int) (mRefreshViewHeight - newMoveDistanceY));
+
+                if (!mRefreshing) {
+                    float percent = newMoveDistanceY / mRefreshViewMaxHeight;
+                    mRefreshInnerLayout.setTransitionProgress(percent);
+                }
                 return true;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
+
+                if (mListView.getTranslationY() >= mRefreshViewHeight) {
+                    isDragRefresh = true;
+                    startBackRefreshViewHeightAnim();
+                } else {
+                    startBackTopAnim();
+                }
+
                 return true;
             default:
                 return super.onTouchEvent(event);
         }
+    }
+
+    public void startRefreshViewBackTopAnim() {
+        if (mRefreshViewBackTopAnim == null) {
+            mRefreshViewBackTopAnim = ValueAnimator.ofFloat(mRefreshViewHeight, 0);
+            mRefreshViewBackTopAnim.setInterpolator(new DecelerateInterpolator());
+            mRefreshViewBackTopAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator animation) {
+                    float value = (float) animation.getAnimatedValue();
+                    mListView.setTranslationY(value);
+                    mRefreshInnerLayout.getLayoutParams().height = (int) value;
+                    mRefreshInnerLayout.requestLayout();
+                    mRefreshInnerLayout.setPadding(0, 0, 0, (int) (mRefreshViewHeight - value));
+                }
+            });
+            mRefreshViewBackTopAnim.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    mRefreshInnerLayout.resetValues();
+                }
+            });
+            mRefreshViewBackTopAnim.setDuration(300);
+        } else if (mRefreshViewBackTopAnim.isRunning()) {
+            mRefreshViewBackTopAnim.cancel();
+        }
+        mRefreshViewBackTopAnim.start();
+    }
+
+    public void startBackRefreshViewHeightAnim() {
+        if (mBackRefreshViewHeightAnim == null) {
+            mBackRefreshViewHeightAnim = ValueAnimator.ofFloat(0);
+            mBackRefreshViewHeightAnim.setFloatValues(mRefreshViewMaxHeight, mRefreshViewHeight);
+            mBackRefreshViewHeightAnim.setInterpolator(new LinearInterpolator());
+            mBackRefreshViewHeightAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator animation) {
+                    float value = (float) animation.getAnimatedValue();
+                    mListView.setTranslationY(value);
+                    mRefreshInnerLayout.getLayoutParams().height = (int) value;
+                    mRefreshInnerLayout.requestLayout();
+
+                    if (!mRefreshing) {
+                        float percent = (value - mRefreshViewHeight) / (mRefreshViewMaxHeight - mRefreshViewHeight);
+                        mRefreshInnerLayout.setTransitionProgress(1 - percent);
+                        mRefreshInnerLayout.setMode(RefreshView.MODE_SETUP_4);
+                    }
+                }
+            });
+            mBackRefreshViewHeightAnim.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+                    super.onAnimationStart(animation);
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    mPreListViewY = mListView.getTranslationY();
+                    if (!mRefreshing) {
+                        if (mListener != null && isDragRefresh) {
+                            mRefreshInnerLayout.setOnRefreshListener(mListener);
+                        } else {
+                            mRefreshInnerLayout.setOnRefreshListener(null);
+                        }
+                        mRefreshInnerLayout.setMode(RefreshView.MODE_SETUP_5);
+                        mRefreshing = true;
+                    }
+                }
+            });
+            mBackRefreshViewHeightAnim.setDuration(300);
+        } else if (mBackRefreshViewHeightAnim.isRunning()) {
+            mBackRefreshViewHeightAnim.cancel();
+        }
+        mBackRefreshViewHeightAnim.setFloatValues(mListView.getTranslationY(), mRefreshViewHeight);
+        mBackRefreshViewHeightAnim.start();
+    }
+
+    public void startBackTopAnim() {
+        if (mBackTopAnim == null) {
+            mBackTopAnim = ValueAnimator.ofFloat(mRefreshViewHeight, 0);
+            mBackTopAnim.setInterpolator(new DecelerateInterpolator());
+            mBackTopAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator animation) {
+                    float value = (float) animation.getAnimatedValue();
+                    mListView.setTranslationY(value);
+                    mRefreshInnerLayout.getLayoutParams().height = (int) value;
+                    mRefreshInnerLayout.requestLayout();
+                    mRefreshInnerLayout.setPadding(0, 0, 0, mRefreshViewHeight - Math.round(value));
+                }
+            });
+            mBackTopAnim.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    mPreListViewY = mListView.getTranslationY();
+                }
+            });
+            mBackTopAnim.setDuration(300);
+        } else if (mBackTopAnim.isRunning()) {
+            mBackTopAnim.cancel();
+        }
+        mBackTopAnim.start();
     }
 
     private boolean canChildScrollUp() {
@@ -171,5 +297,28 @@ public class RefreshLayout extends FrameLayout {
 
     private float d2x(float size) {
         return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, size, getContext().getResources().getDisplayMetrics());
+    }
+
+    public void setRefreshing(boolean refreshing) {
+        if (refreshing && !mRefreshing) {
+            mRefreshing = true;
+            isDragRefresh = false;
+            mListView.setTranslationY(mRefreshViewHeight);
+            mRefreshInnerLayout.getLayoutParams().height = mRefreshViewHeight;
+            mRefreshInnerLayout.setPadding(0, 0, 0, 0);
+            mRefreshInnerLayout.setMode(RefreshView.MODE_SETUP_5);
+        } else if (mRefreshing != refreshing) {
+            mRefreshing = false;
+            mPreListViewY = 0;
+            startRefreshViewBackTopAnim();
+        }
+    }
+
+    public void setOnRefreshListener(OnRefreshListener listener) {
+        mListener = listener;
+    }
+
+    public interface OnRefreshListener {
+        void onRefresh();
     }
 }
