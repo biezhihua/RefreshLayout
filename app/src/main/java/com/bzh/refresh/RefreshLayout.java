@@ -30,7 +30,6 @@ import android.widget.FrameLayout;
  */
 public class RefreshLayout extends FrameLayout {
 
-
     public interface OnRefreshListener {
         void onRefresh();
     }

@@ -11,49 +11,12 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final int TRANSITION_ANIM_DURATION = 300;
-    public static final float TRANSITION_START_VAL = 0.0f;
-    public static final float TRANSITION_END_VAL = 1.0f;
-
-//    Handler mHandler = new Handler();
-//    float mProgress = 0.0f;
-//    private RefreshView refreshView;
-//
-//    Runnable runnable = new Runnable() {
-//        @Override
-//        public void run() {
-//            setProgress();
-//
-//            if (mProgress <= 1.0f) {
-//                mHandler.postDelayed(this, 0);
-//            } else {
-//            }
-//        }
-//    };
-//
-//    private void setProgress() {
-//        mProgress += 0.01;
-//        refreshView.setTransitionProgress(mProgress);
-//    }
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
         final RefreshLayout refreshLayout = (RefreshLayout) findViewById(R.id.refreshLayout);
-//
-//        findViewById(R.id.button1).setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                refreshView.resetValues();
-//                mProgress = 0.0f;
-//                mHandler.removeCallbacks(runnable);
-//                mHandler.post(runnable);
-//            }
-//        });
 
         refreshLayout.setOnRefreshListener(new RefreshLayout.OnRefreshListener() {
             @Override
