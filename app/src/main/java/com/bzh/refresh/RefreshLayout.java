@@ -46,7 +46,7 @@ public class RefreshLayout extends FrameLayout {
             isDragRefresh = false;
             mListView.setTranslationY(mRefreshViewHeight);
             mRefreshInnerLayout.getLayoutParams().height = mRefreshViewHeight;
-            mRefreshInnerLayout.setPadding(0, 0, 0, 0);
+            requestLayout();
             mRefreshInnerLayout.setMode(RefreshView.MODE_SETUP_5);
         } else if (mRefreshing != refreshing) {
             mRefreshing = false;
@@ -156,8 +156,7 @@ public class RefreshLayout extends FrameLayout {
                 float newMoveDistanceY = Math.round(Math.min(mRefreshViewMaxHeight, mPreListViewY + moveDistanceY)); // 加上之前的偏移量
                 mListView.setTranslationY(newMoveDistanceY);
                 mRefreshInnerLayout.getLayoutParams().height = (int) newMoveDistanceY;
-                mRefreshInnerLayout.setPadding(0, 0, 0, (int) (mRefreshViewHeight - newMoveDistanceY));
-
+                requestLayout();
                 if (!mRefreshing) {
                     float percent = newMoveDistanceY / (mRefreshViewHeight * 2);
                     mRefreshInnerLayout.setTransitionProgress(Math.min(1, percent));
@@ -185,10 +184,7 @@ public class RefreshLayout extends FrameLayout {
     private void initRefreshView(Context context, AttributeSet attrs) {
         mRefreshInnerLayout = new RefreshInnerLayout(context, attrs);
         LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
-        params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        params.height = mRefreshViewHeight;
         mRefreshInnerLayout.setLayoutParams(params);
-        mRefreshInnerLayout.setPadding(0, 0, 0, mRefreshViewHeight);
         super.addView(mRefreshInnerLayout);
     }
 
@@ -202,8 +198,8 @@ public class RefreshLayout extends FrameLayout {
                     float value = (float) animation.getAnimatedValue();
                     mListView.setTranslationY(value);
                     mRefreshInnerLayout.getLayoutParams().height = (int) value;
-                    mRefreshInnerLayout.requestLayout();
-                    mRefreshInnerLayout.setPadding(0, 0, 0, (int) (mRefreshViewHeight - value));
+                    requestLayout();
+//                    mRefreshInnerLayout.setPadding(0, 0, 0, (int) (mRefreshViewHeight - value));
                 }
             });
             mRefreshViewBackTopAnim.addListener(new AnimatorListenerAdapter() {
@@ -231,7 +227,7 @@ public class RefreshLayout extends FrameLayout {
                     float value = (float) animation.getAnimatedValue();
                     mListView.setTranslationY(value);
                     mRefreshInnerLayout.getLayoutParams().height = (int) value;
-                    mRefreshInnerLayout.requestLayout();
+                    requestLayout();
 
                     if (!mRefreshing) {
                         float percent = (value - mRefreshViewHeight) / (mRefreshViewMaxHeight - mRefreshViewHeight);
@@ -279,8 +275,8 @@ public class RefreshLayout extends FrameLayout {
                     float value = (float) animation.getAnimatedValue();
                     mListView.setTranslationY(value);
                     mRefreshInnerLayout.getLayoutParams().height = (int) value;
-                    mRefreshInnerLayout.requestLayout();
-                    mRefreshInnerLayout.setPadding(0, 0, 0, mRefreshViewHeight - Math.round(value));
+                    requestLayout();
+//                    mRefreshInnerLayout.setPadding(0, 0, 0, mRefreshViewHeight - Math.round(value));
                 }
             });
             mBackTopAnim.addListener(new AnimatorListenerAdapter() {

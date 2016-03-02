@@ -41,10 +41,8 @@ class RefreshInnerLayout extends RelativeLayout {
         }
 
         mRefreshView = new RefreshView(getContext(), attrs);
-        LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        LayoutParams params = new LayoutParams(mRefreshViewHeight, mRefreshViewHeight);
         params.addRule(RelativeLayout.CENTER_IN_PARENT);
-        params.height = mRefreshViewHeight;
-        params.width = mRefreshViewHeight;
         mRefreshView.setLayoutParams(params);
         addView(mRefreshView);
     }

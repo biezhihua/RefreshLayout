@@ -140,12 +140,16 @@ class RefreshView extends View {
                 drawSetup1LeftPath(canvas, setup1TransitionProgress);
                 drawSetup1RightPath(canvas, setup1TransitionProgress);
 
-                if (mTransitionProgress >= RATIO_MODE_SETUP_1) {
+                if (mTransitionProgress > RATIO_MODE_SETUP_1) {
                     mCurrentMode = MODE_SETUP_2;
                 }
             }
             break;
             case MODE_SETUP_2: {
+                if (mTransitionProgress < RATIO_MODE_SETUP_1) {
+                    mCurrentMode = MODE_SETUP_1;
+                }
+
                 float setup2Progress = mTransitionProgress - RATIO_MODE_SETUP_1;
                 float setup2TransitionProgress = setup2Progress * RATIO_MODE_ROOT;
 
@@ -756,6 +760,7 @@ class RefreshView extends View {
     }
 
     private void initializeValues() {
+        mSize = mRefreshViewHeight;
         mViewCenter = mSize / 2;
         mRectangleWidth = mSize / RATIO_MODE_NONE_RECTANGLE_WIDTH;
         mMLegWidth = mSize / RATIO_LEG_WIDTH;
