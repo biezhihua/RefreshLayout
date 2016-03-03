@@ -27,7 +27,7 @@ class RefreshView extends View {
     public static final float TRANSITION_END_VAL = 1.0f;
     public static final int TRANSITION_LOADING_ANIM_DURATION = 330;             // 加载动画时间
     public static final int TRANSITION_ANIM_DURATION = 150;                     // 动画时间
-    public static final int TRANSITION_RIGHT_START_DELAY = 230;
+    public static final int TRANSITION_RIGHT_START_DELAY = 270;
     public static final int MODE_NONE = 0x1;                                    // 默认状态
     public static final int MODE_SETUP_1 = MODE_NONE << 1;
     public static final int MODE_SETUP_2 = MODE_SETUP_1 << 1;
