@@ -12,9 +12,11 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 
 /**
  * Created by biezhihua on 16-2-28.
@@ -23,10 +25,9 @@ class RefreshView extends View {
 
     public static final float TRANSITION_START_VAL = 0.0f;
     public static final float TRANSITION_END_VAL = 1.0f;
-    public static final int TRANSITION_LOADING_ANIM_DURATION = 350;             // 加载动画时间
-    public static final int TRANSITION_ANIM_DURATION = 200;                     // 动画时间
-    public static final int TRANSITION_CENTER_START_DELAY = 200;
-    public static final int TRANSITION_RIGHT_START_DELAY = 500;
+    public static final int TRANSITION_LOADING_ANIM_DURATION = 330;             // 加载动画时间
+    public static final int TRANSITION_ANIM_DURATION = 150;                     // 动画时间
+    public static final int TRANSITION_RIGHT_START_DELAY = 230;
     public static final int MODE_NONE = 0x1;                                    // 默认状态
     public static final int MODE_SETUP_1 = MODE_NONE << 1;
     public static final int MODE_SETUP_2 = MODE_SETUP_1 << 1;
@@ -79,10 +80,12 @@ class RefreshView extends View {
     private boolean isCenterReversed;
 
     private ValueAnimator mRightLoadingAnim;        // 加载动画-右侧点的相关参数
+    private ValueAnimator mRightResetAnim;
     private float rightSquareX;
     private float rightSquareY;
     private float mRightSquareProgress;
     private boolean isRightReverse;
+    private boolean isRightReversed;
 
     private int mRefreshViewHeight;
 
@@ -121,7 +124,7 @@ class RefreshView extends View {
 
         drawStateContent(canvas);
 
-        drawOuterSquare(canvas);
+//        drawOuterSquare(canvas);
     }
 
     private void drawStateContent(Canvas canvas) {
@@ -130,157 +133,182 @@ class RefreshView extends View {
 
         switch (mCurrentMode) {
             case MODE_NONE: {
-                drawDefaultRectangle(canvas);
-
-                mCurrentMode = MODE_SETUP_1;
+                drawNone(canvas);
             }
             break;
             case MODE_SETUP_1: {
-
-                // 将 0 ~ 0.33 内的值变换为 0 ~ 1.0的值
-                final float setup1Progress = mTransitionProgress - RATIO_MODE_SETUP_0;
-                final float setup1TransitionProgress = setup1Progress * RATIO_MODE_ROOT;
-
-                drawLeftIncreaseTrapezoidPath(canvas, setup1TransitionProgress);
-
-                drawRightIncreaseTrapezoidPath(canvas, setup1TransitionProgress);
-
-                if (mTransitionProgress >= RATIO_MODE_SETUP_1) {
-                    mCurrentMode = MODE_SETUP_2;
-                }
+                drawSetup1(canvas);
             }
             break;
             case MODE_SETUP_2: {
-
-                // 低于临界值则返回到上一步
-                if (mTransitionProgress < RATIO_MODE_SETUP_1) {
-                    mCurrentMode = MODE_SETUP_1;
-                    return;
-                }
-
-                // 将 0.33 ~ 0.66 内的值变换为 0 ~ 1.0的值
-                float setup2Progress = mTransitionProgress - RATIO_MODE_SETUP_1;
-                float setup2TransitionProgress = setup2Progress * RATIO_MODE_ROOT;
-
-                // 根据两点得道底边和对边
-                float x1 = mViewCenter + mRectangleWidth / 2;
-                float y1 = mViewCenter - mRectangleWidth / 2 - d2x(GAP);
-                float x2 = mMLegWidth;
-                float y2 = mSize;
-
-                float base = getBase(getAngle(y1 - y2, x1 - x2), getHypotenuse(y1 - y2, x1 - x2));
-                float opposite = getOpposite(getAngle(y1 - y2, x1 - x2), getHypotenuse(y1 - y2, x1 - x2));
-
-                drawLeftReduceTrapezoidPath(canvas, setup2TransitionProgress, base, opposite);
-
-                drawRightReduceTrapezoidPath(canvas, setup2TransitionProgress, base, opposite);
-
-                // 超出临界值则进入下一步
-                if (mTransitionProgress >= RATIO_MODE_SETUP_2) {
-                    mCurrentMode = MODE_SETUP_3;
-                }
+                drawSetup2(canvas);
             }
             break;
             case MODE_SETUP_3: {
-
-                // 低于临界值则返回到上一步
-                if (mTransitionProgress < RATIO_MODE_SETUP_2) {
-                    mCurrentMode = MODE_SETUP_2;
-                    return;
-                }
-
-                // 将 0.66 ~ 0.99 内的值变换为 0 ~ 1.0的值
-                float setup3Progress = mTransitionProgress - RATIO_MODE_SETUP_2;
-                float setup3TransitionProgress = setup3Progress * RATIO_MODE_ROOT;
-
-                drawLeftMLeg(canvas);
-
-                drawRightMLeg(canvas);
-
-                drawLeftIncreaseMArmPath(canvas, setup3TransitionProgress);
-
-                drawRightIncreaseMArmPath(canvas, setup3TransitionProgress);
-
+                drawSetup3(canvas);
             }
             break;
             case MODE_SETUP_4: {
-
-                // 根据进度得到M“腿”的高度
-                float legHeight = mSize - mTransitionProgress * (mSize - mMLegWidth);
-
-                drawLeftMLeg(canvas, legHeight);
-
-                drawRightMLeg(canvas, legHeight);
-
-                drawLeftReduceMArmPath(canvas, mTransitionProgress);
-
-                drawRightReduceMArmPath(canvas, mTransitionProgress);
-
-                if (mTransitionProgress >= 0.9f) {
-                    float centerX = mViewCenter;
-                    float centerY = mViewCenter + mMLegWidth / 2;
-                    drawSquare(canvas, centerX, centerY, mPaint);
-                }
+                drawSetup4(canvas);
             }
             break;
             case MODE_SETUP_5: {
-
-                float endY = 0;
-
-                // 画中心的正方形点
-                centerSquareX = mViewCenter;
-                centerSquareY = mViewCenter + mMLegWidth / 2;
-                drawSquare(canvas, centerSquareX, centerSquareY, mPaint);
-
-                // 画左边的正方形点
-                endY = mSize - mSize / 4 - mMLegWidth / 2;
-                leftSquareX = mMLegWidth / 2;
-                leftSquareY = mMLegWidth / 2 + endY * mTransitionProgress;
-                drawSquare(canvas, leftSquareX, leftSquareY, mPaint);
-
-                // 画右边的正方形点
-                endY = mSize / 4 - mMLegWidth / 2;
-                rightSquareX = mSize - mMLegWidth / 2;
-                rightSquareY = mMLegWidth / 2 + endY * mTransitionProgress;
-                drawSquare(canvas, rightSquareX, rightSquareY, mPaint);
-
-                if (mTransitionProgress >= 1.0f) {
-                    startLeftLoadingAnim();
-                    startCenterResetAnim();
-                    startRightLoadingAnim();
-                    mCurrentMode = MODE_SETUP_6;
-                }
+                drawSetup5(canvas);
             }
             break;
             case MODE_SETUP_6: {
-
-                if (isLeftReverse) {
-                    drawSquare(canvas, leftSquareX, mSize / 4 + mLeftSquareProgress, mPaint);
-                } else {
-                    drawSquare(canvas, leftSquareX, mSize - mSize / 4 - mLeftSquareProgress, mPaint);
-                }
-
-                if (isCenterReverse) {
-                    drawSquare(canvas, centerSquareX, mSize / 4 + mCenterSquareProgress, mPaint);
-                } else {
-                    if (isCenterReversed) {
-                        drawSquare(canvas, centerSquareX, mSize - mSize / 4 - mCenterSquareProgress, mPaint);
-                    } else {
-                        if (mViewCenter + mMLegWidth / 2 - mCenterSquareProgress >= mSize / 4) {
-                            drawSquare(canvas, centerSquareX, mViewCenter + mMLegWidth / 2 - mCenterSquareProgress, mPaint);
-                        } else {
-                            drawSquare(canvas, centerSquareX, mSize / 4, mPaint);
-                        }
-                    }
-                }
-
-                if (isRightReverse) {
-                    drawSquare(canvas, rightSquareX, mSize - mSize / 4 - mRightSquareProgress, mPaint);
-                } else {
-                    drawSquare(canvas, rightSquareX, mSize / 4 + mRightSquareProgress, mPaint);
-                }
+                drawSetup6(canvas);
             }
             break;
+        }
+    }
+
+    private void drawNone(Canvas canvas) {
+        drawDefaultRectangle(canvas);
+
+        mCurrentMode = MODE_SETUP_1;
+    }
+
+    private void drawSetup1(Canvas canvas) {// 将 0 ~ 0.33 内的值变换为 0 ~ 1.0的值
+        final float setup1Progress = mTransitionProgress - RATIO_MODE_SETUP_0;
+        final float setup1TransitionProgress = setup1Progress * RATIO_MODE_ROOT;
+
+        drawLeftIncreaseTrapezoidPath(canvas, setup1TransitionProgress);
+
+        drawRightIncreaseTrapezoidPath(canvas, setup1TransitionProgress);
+
+        if (mTransitionProgress >= RATIO_MODE_SETUP_1) {
+            mCurrentMode = MODE_SETUP_2;
+        }
+    }
+
+    private void drawSetup2(Canvas canvas) {// 低于临界值则返回到上一步
+        if (mTransitionProgress < RATIO_MODE_SETUP_1) {
+            mCurrentMode = MODE_SETUP_1;
+            return;
+        }
+
+        // 将 0.33 ~ 0.66 内的值变换为 0 ~ 1.0的值
+        float setup2Progress = mTransitionProgress - RATIO_MODE_SETUP_1;
+        float setup2TransitionProgress = setup2Progress * RATIO_MODE_ROOT;
+
+        // 根据两点得道底边和对边
+        float x1 = mViewCenter + mRectangleWidth / 2;
+        float y1 = mViewCenter - mRectangleWidth / 2 - d2x(GAP);
+        float x2 = mMLegWidth;
+        float y2 = mSize;
+
+        float base = getBase(getAngle(y1 - y2, x1 - x2), getHypotenuse(y1 - y2, x1 - x2));
+        float opposite = getOpposite(getAngle(y1 - y2, x1 - x2), getHypotenuse(y1 - y2, x1 - x2));
+
+        drawLeftReduceTrapezoidPath(canvas, setup2TransitionProgress, base, opposite);
+
+        drawRightReduceTrapezoidPath(canvas, setup2TransitionProgress, base, opposite);
+
+        // 超出临界值则进入下一步
+        if (mTransitionProgress >= RATIO_MODE_SETUP_2) {
+            mCurrentMode = MODE_SETUP_3;
+        }
+    }
+
+    private void drawSetup3(Canvas canvas) {// 低于临界值则返回到上一步
+        if (mTransitionProgress < RATIO_MODE_SETUP_2) {
+            mCurrentMode = MODE_SETUP_2;
+            return;
+        }
+
+        // 将 0.66 ~ 0.99 内的值变换为 0 ~ 1.0的值
+        float setup3Progress = mTransitionProgress - RATIO_MODE_SETUP_2;
+        float setup3TransitionProgress = setup3Progress * RATIO_MODE_ROOT;
+
+        drawLeftMLeg(canvas);
+
+        drawRightMLeg(canvas);
+
+        drawLeftIncreaseMArmPath(canvas, setup3TransitionProgress);
+
+        drawRightIncreaseMArmPath(canvas, setup3TransitionProgress);
+    }
+
+    private void drawSetup4(Canvas canvas) {// 根据进度得到M“腿”的高度
+        float legHeight = mSize - mTransitionProgress * (mSize - mMLegWidth);
+
+        drawLeftMLeg(canvas, legHeight);
+
+        drawRightMLeg(canvas, legHeight);
+
+        drawLeftReduceMArmPath(canvas, mTransitionProgress);
+
+        drawRightReduceMArmPath(canvas, mTransitionProgress);
+
+        if (mTransitionProgress >= 0.9f) {
+            float centerX = mViewCenter;
+            float centerY = mViewCenter + mMLegWidth / 2;
+            drawSquare(canvas, centerX, centerY, mPaint);
+        }
+    }
+
+    private void drawSetup5(Canvas canvas) {
+        float endY = 0;
+
+        // 画中心的正方形点
+        centerSquareX = mViewCenter;
+        centerSquareY = mViewCenter + mMLegWidth / 2;
+        drawSquare(canvas, centerSquareX, centerSquareY, mPaint);
+
+        // 画左边的正方形点
+        endY = mSize - mSize / 4 - mMLegWidth / 2;
+        leftSquareX = mMLegWidth / 2;
+        leftSquareY = mMLegWidth / 2 + endY * mTransitionProgress;
+        drawSquare(canvas, leftSquareX, leftSquareY, mPaint);
+
+        // 画右边的正方形点
+        endY = mSize / 4 - mMLegWidth / 2;
+        rightSquareX = mSize - mMLegWidth / 2;
+        rightSquareY = mMLegWidth / 2 + endY * mTransitionProgress;
+        drawSquare(canvas, rightSquareX, rightSquareY, mPaint);
+
+        if (mTransitionProgress >= 1.0f) {
+            startLeftLoadingAnim();
+            startCenterResetAnim();
+            startRightResetAnim();
+            mCurrentMode = MODE_SETUP_6;
+        }
+    }
+
+    private void drawSetup6(Canvas canvas) {
+        if (isLeftReverse) {
+            drawSquare(canvas, leftSquareX, mSize / 4 + mLeftSquareProgress, mPaint);
+        } else {
+            drawSquare(canvas, leftSquareX, mSize - mSize / 4 - mLeftSquareProgress, mPaint);
+        }
+
+        if (!isCenterReverse) {
+            if (isCenterReversed) {
+                drawSquare(canvas, centerSquareX, mSize / 4 + mCenterSquareProgress, mPaint);
+            } else {
+                if (mViewCenter + mMLegWidth / 2 + mCenterSquareProgress <= mSize - mSize / 4) {
+                    drawSquare(canvas, centerSquareX, mViewCenter + mMLegWidth / 2 + mCenterSquareProgress, mPaint);
+                } else {
+                    drawSquare(canvas, centerSquareX, mSize - mSize / 4, mPaint);
+                }
+            }
+        } else {
+            drawSquare(canvas, centerSquareX, mSize - mSize / 4 - mCenterSquareProgress, mPaint);
+        }
+
+        if (isRightReverse) {
+            drawSquare(canvas, rightSquareX, mSize - mSize / 4 - mRightSquareProgress, mPaint);
+        } else {
+            if (isRightReversed) {
+                drawSquare(canvas, rightSquareX, mSize / 4 + mRightSquareProgress, mPaint);
+            } else {
+                if (mSize / 4 + mRightSquareProgress <= mSize - mSize / 4) {
+                    drawSquare(canvas, rightSquareX, mSize / 4 + mRightSquareProgress, mPaint);
+                } else {
+                    drawSquare(canvas, rightSquareX, mSize - mSize / 4, mPaint);
+                }
+            }
         }
     }
 
@@ -337,6 +365,14 @@ class RefreshView extends View {
             });
             mLeftLoadingAnim.addListener(new AnimatorListenerAdapter() {
                 @Override
+                public void onAnimationStart(Animator animation) {
+                    super.onAnimationStart(animation);
+                    if (mListener != null) {
+                        mListener.onRefresh();
+                    }
+                }
+
+                @Override
                 public void onAnimationRepeat(Animator animation) {
                     isLeftReverse = !isLeftReverse;
                 }
@@ -350,9 +386,8 @@ class RefreshView extends View {
     private void startCenterResetAnim() {
         if (mCenterResetAnim == null) {
             mCenterResetAnim = ValueAnimator.ofFloat(0.f);
-            mCenterResetAnim.setFloatValues(0.f, mViewCenter + mMLegWidth / 2 - mSize / 4);
+            mCenterResetAnim.setFloatValues(0.f, mSize - mSize / 4 - (mViewCenter + mMLegWidth / 2));
             mCenterResetAnim.setDuration(TRANSITION_ANIM_DURATION);
-            mCenterResetAnim.setStartDelay(TRANSITION_CENTER_START_DELAY);
             mCenterResetAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
                 public void onAnimationUpdate(ValueAnimator animation) {
@@ -399,6 +434,31 @@ class RefreshView extends View {
         mCenterLoadingAnim.start();
     }
 
+    private void startRightResetAnim() {
+        if (mRightResetAnim == null) {
+            mRightResetAnim = ValueAnimator.ofFloat(0.f);
+            mRightResetAnim.setFloatValues(0.f, mSize / 2);
+            mRightResetAnim.setDuration(TRANSITION_RIGHT_START_DELAY);
+            mRightResetAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator animation) {
+                    mRightSquareProgress = (float) animation.getAnimatedValue();
+                }
+            });
+            mRightResetAnim.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    isRightReverse = !isRightReverse;
+                    isRightReversed = true;
+                    startRightLoadingAnim();
+                }
+            });
+        } else if (mRightResetAnim.isRunning()) {
+            mRightResetAnim.cancel();
+        }
+        mRightResetAnim.start();
+    }
+
     private void startRightLoadingAnim() {
         if (mRightLoadingAnim == null) {
             mRightLoadingAnim = ValueAnimator.ofFloat(0.f);
@@ -406,7 +466,6 @@ class RefreshView extends View {
             mRightLoadingAnim.setDuration(TRANSITION_LOADING_ANIM_DURATION);
             mRightLoadingAnim.setRepeatMode(ValueAnimator.RESTART);
             mRightLoadingAnim.setRepeatCount(ValueAnimator.INFINITE);
-            mRightLoadingAnim.setStartDelay(TRANSITION_RIGHT_START_DELAY);
             mRightLoadingAnim.setInterpolator(new AccelerateDecelerateInterpolator());
             mRightLoadingAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
@@ -815,6 +874,9 @@ class RefreshView extends View {
         if (mCenterResetAnim != null) {
             mCenterResetAnim.cancel();
         }
+        if (mRightResetAnim != null) {
+            mRightResetAnim.cancel();
+        }
 
         mSize = 0;
         mMLegWidth = 0;
@@ -836,6 +898,7 @@ class RefreshView extends View {
         isCenterReverse = false;
         isCenterReversed = false;
         isRightReverse = false;
+        isRightReversed = false;
 
         initializeValues();
     }
@@ -876,7 +939,7 @@ class RefreshView extends View {
 
     /**
      * 获取任意两点间角度
-     * <p/>
+     * <p>
      * y1-y2 与 y2-y1 不同
      *
      * @param x y1-y2
