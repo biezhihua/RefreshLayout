@@ -43,10 +43,10 @@ public class RefreshLayout extends FrameLayout {
     public void setRefreshing(boolean refreshing) {
         if (refreshing && !mRefreshing) {
             mRefreshing = true;
-            isDragRefresh = false;
             mListView.setTranslationY(mRefreshViewHeight);
             mRefreshInnerLayout.getLayoutParams().height = mRefreshViewHeight;
             requestLayout();
+            mRefreshInnerLayout.setOnRefreshListener(null);
             mRefreshInnerLayout.setMode(RefreshView.MODE_SETUP_5);
         } else if (mRefreshing != refreshing) {
             mRefreshing = false;
@@ -55,7 +55,6 @@ public class RefreshLayout extends FrameLayout {
         }
     }
 
-    private static final String TAG = "RefreshLayout";
     public static final AccelerateDecelerateInterpolator ACCELERATE_DECELERATE_INTERPOLATOR = new AccelerateDecelerateInterpolator();
     public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;    // 可拖动的默认最大值
     public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;         // 刷新控件的默认高度
@@ -64,7 +63,6 @@ public class RefreshLayout extends FrameLayout {
     private int mRefreshViewHeight;                     // 刷新动画控件的高度
 
     private boolean mRefreshing;                        // 是否处于刷新状态
-    private boolean isDragRefresh;                      // 是否时手势拖动刷新，非手势拖动刷新不响应回调事件
 
     private float mTouchStartY;                         // 开始触摸的Y点
     private float mTouchCurrentY;                       // 当前触摸的Y点  mTouchCurrentY - mTouchStartY 相减得 移动的距离
@@ -166,7 +164,6 @@ public class RefreshLayout extends FrameLayout {
             case MotionEvent.ACTION_CANCEL:
 
                 if (mListView.getTranslationY() >= mRefreshViewHeight) {
-                    isDragRefresh = true;
                     startBackRefreshViewHeightAnim();
                 } else {
                     startBackTopAnim();
@@ -245,10 +242,8 @@ public class RefreshLayout extends FrameLayout {
                     super.onAnimationEnd(animation);
                     mPreListViewY = mListView.getTranslationY();
                     if (!mRefreshing) {
-                        if (mListener != null && isDragRefresh) {
+                        if (mListener != null) {
                             mRefreshInnerLayout.setOnRefreshListener(mListener);
-                        } else {
-                            mRefreshInnerLayout.setOnRefreshListener(null);
                         }
                         mRefreshInnerLayout.setMode(RefreshView.MODE_SETUP_5);
                         mRefreshing = true;
