@@ -19,3 +19,13 @@
 动画效果3
 
 ![](https://github.com/biezhihua/YYTM/raw/master/gif/演示3.gif)
+
+效果视频
+
+![](https://github.com/biezhihua/YYTM/raw/master/gif/loading标注.mp4)
+
+![](https://github.com/biezhihua/YYTM/raw/master/gif/loading演示.mp4)
+
+结果
+
+![](https://github.com/biezhihua/YYTM/raw/master/gif/结果.mp4)
