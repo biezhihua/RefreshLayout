@@ -12,11 +12,9 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.DecelerateInterpolator;
 
 /**
  * Created by biezhihua on 16-2-28.
@@ -169,7 +167,8 @@ class RefreshView extends View {
         mCurrentMode = MODE_SETUP_1;
     }
 
-    private void drawSetup1(Canvas canvas) {// 将 0 ~ 0.33 内的值变换为 0 ~ 1.0的值
+    private void drawSetup1(Canvas canvas) {
+        // 将 0 ~ 0.33 内的值变换为 0 ~ 1.0的值
         final float setup1Progress = mTransitionProgress - RATIO_MODE_SETUP_0;
         final float setup1TransitionProgress = setup1Progress * RATIO_MODE_ROOT;
 
@@ -182,7 +181,8 @@ class RefreshView extends View {
         }
     }
 
-    private void drawSetup2(Canvas canvas) {// 低于临界值则返回到上一步
+    private void drawSetup2(Canvas canvas) {
+        // 低于临界值则返回到上一步
         if (mTransitionProgress < RATIO_MODE_SETUP_1) {
             mCurrentMode = MODE_SETUP_1;
             return;
@@ -211,7 +211,8 @@ class RefreshView extends View {
         }
     }
 
-    private void drawSetup3(Canvas canvas) {// 低于临界值则返回到上一步
+    private void drawSetup3(Canvas canvas) {
+        // 低于临界值则返回到上一步
         if (mTransitionProgress < RATIO_MODE_SETUP_2) {
             mCurrentMode = MODE_SETUP_2;
             return;
@@ -230,7 +231,8 @@ class RefreshView extends View {
         drawRightIncreaseMArmPath(canvas, setup3TransitionProgress);
     }
 
-    private void drawSetup4(Canvas canvas) {// 根据进度得到M“腿”的高度
+    private void drawSetup4(Canvas canvas) {
+        // 根据进度得到M“腿”的高度
         float legHeight = mSize - mTransitionProgress * (mSize - mMLegWidth);
 
         drawLeftMLeg(canvas, legHeight);
@@ -916,22 +918,18 @@ class RefreshView extends View {
     }
 
     /**
-     * 获取对边
-     *
      * @param angle      角度
      * @param hypotenuse 斜边
-     * @return
+     * @return 对边
      */
     private float getOpposite(float angle, float hypotenuse) {
         return (float) (Math.sin(angle) * hypotenuse);
     }
 
     /**
-     * 获取底边
-     *
      * @param angle      角度
      * @param hypotenuse 斜边
-     * @return
+     * @return 底边
      */
     private float getBase(float angle, float hypotenuse) {
         return (float) (Math.cos(angle) * hypotenuse);
@@ -939,20 +937,17 @@ class RefreshView extends View {
 
     /**
      * 获取任意两点间角度
-     * <p>
      * y1-y2 与 y2-y1 不同
      *
      * @param x y1-y2
      * @param y x1-x2
-     * @return
+     * @return 角度
      */
     private float getAngle(float y, float x) {
         return (float) Math.atan2(y, x);
     }
 
     /**
-     * 获取斜边
-     *
      * @param y y1-y2
      * @param x x1-x2
      * @return 斜边
