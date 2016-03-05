@@ -12,6 +12,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
@@ -182,12 +183,6 @@ class RefreshView extends View {
     }
 
     private void drawSetup2(Canvas canvas) {
-        // 低于临界值则返回到上一步
-        if (mTransitionProgress < RATIO_MODE_SETUP_1) {
-            mCurrentMode = MODE_SETUP_1;
-            return;
-        }
-
         // 将 0.33 ~ 0.66 内的值变换为 0 ~ 1.0的值
         float setup2Progress = mTransitionProgress - RATIO_MODE_SETUP_1;
         float setup2TransitionProgress = setup2Progress * RATIO_MODE_ROOT;
@@ -205,15 +200,29 @@ class RefreshView extends View {
 
         drawRightReduceTrapezoidPath(canvas, setup2TransitionProgress, base, opposite);
 
+
+        // 低于临界值则返回到上一步
+        if (mTransitionProgress < RATIO_MODE_SETUP_1) {
+            mCurrentMode = MODE_SETUP_1;
+            return;
+        }
+
         // 超出临界值则进入下一步
         if (mTransitionProgress >= RATIO_MODE_SETUP_2) {
+            Log.d(TAG, "drawSetup2() called with: " + "mTransitionProgress=[" + mTransitionProgress + "]");
             mCurrentMode = MODE_SETUP_3;
         }
     }
 
     private void drawSetup3(Canvas canvas) {
+
+        drawLeftMLeg(canvas);
+
+        drawRightMLeg(canvas);
+
         // 低于临界值则返回到上一步
         if (mTransitionProgress < RATIO_MODE_SETUP_2) {
+            Log.d(TAG, "drawSetup2() called with: " + "mTransitionProgress=[" + mTransitionProgress + "]");
             mCurrentMode = MODE_SETUP_2;
             return;
         }
@@ -221,10 +230,6 @@ class RefreshView extends View {
         // 将 0.66 ~ 0.99 内的值变换为 0 ~ 1.0的值
         float setup3Progress = mTransitionProgress - RATIO_MODE_SETUP_2;
         float setup3TransitionProgress = setup3Progress * RATIO_MODE_ROOT;
-
-        drawLeftMLeg(canvas);
-
-        drawRightMLeg(canvas);
 
         drawLeftIncreaseMArmPath(canvas, setup3TransitionProgress);
 

@@ -56,8 +56,8 @@ public class RefreshLayout extends FrameLayout {
     }
 
     public static final AccelerateDecelerateInterpolator ACCELERATE_DECELERATE_INTERPOLATOR = new AccelerateDecelerateInterpolator();
-    public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 100;    // 可拖动的默认最大值
-    public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 40;         // 刷新控件的默认高度
+    public static final float DEFAULT_REFRESH_VIEW_MAX_HEIGHT = 300;    // 可拖动的默认最大值
+    public static final float DEFAULT_REFRESH_VIEW_HEIGHT = 100;         // 刷新控件的默认高度
 
     private int mRefreshViewMaxHeight;                  // 可拖动的最大值
     private int mRefreshViewHeight;                     // 刷新动画控件的高度
