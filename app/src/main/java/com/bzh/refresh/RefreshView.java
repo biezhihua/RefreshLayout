@@ -259,13 +259,13 @@ class RefreshView extends View {
         drawSquare(canvas, centerSquareX, centerSquareY, mPaint);
 
         // 画左边的正方形点
-        endY = mSize - mSize / 4 - mMLegWidth / 2;
+        endY = mSize - mSize / RATIO_MODE_ROOT - mMLegWidth / 2;
         leftSquareX = mMLegWidth / 2;
         leftSquareY = mMLegWidth / 2 + endY * mTransitionProgress;
         drawSquare(canvas, leftSquareX, leftSquareY, mPaint);
 
         // 画右边的正方形点
-        endY = mSize / 4 - mMLegWidth / 2;
+        endY = mSize / RATIO_MODE_ROOT - mMLegWidth / 2;
         rightSquareX = mSize - mMLegWidth / 2;
         rightSquareY = mMLegWidth / 2 + endY * mTransitionProgress;
         drawSquare(canvas, rightSquareX, rightSquareY, mPaint);
@@ -280,35 +280,35 @@ class RefreshView extends View {
 
     private void drawSetup6(Canvas canvas) {
         if (isLeftReverse) {
-            drawSquare(canvas, leftSquareX, mSize / 4 + mLeftSquareProgress, mPaint);
+            drawSquare(canvas, leftSquareX, mSize / RATIO_MODE_ROOT + mLeftSquareProgress, mPaint);
         } else {
-            drawSquare(canvas, leftSquareX, mSize - mSize / 4 - mLeftSquareProgress, mPaint);
+            drawSquare(canvas, leftSquareX, mSize - mSize / RATIO_MODE_ROOT - mLeftSquareProgress, mPaint);
         }
 
         if (!isCenterReverse) {
             if (isCenterReversed) {
-                drawSquare(canvas, centerSquareX, mSize / 4 + mCenterSquareProgress, mPaint);
+                drawSquare(canvas, centerSquareX, mSize / RATIO_MODE_ROOT + mCenterSquareProgress, mPaint);
             } else {
-                if (mViewCenter + mMLegWidth / 2 + mCenterSquareProgress <= mSize - mSize / 4) {
+                if (mViewCenter + mMLegWidth / 2 + mCenterSquareProgress <= mSize - mSize / RATIO_MODE_ROOT) {
                     drawSquare(canvas, centerSquareX, mViewCenter + mMLegWidth / 2 + mCenterSquareProgress, mPaint);
                 } else {
-                    drawSquare(canvas, centerSquareX, mSize - mSize / 4, mPaint);
+                    drawSquare(canvas, centerSquareX, mSize - mSize / RATIO_MODE_ROOT, mPaint);
                 }
             }
         } else {
-            drawSquare(canvas, centerSquareX, mSize - mSize / 4 - mCenterSquareProgress, mPaint);
+            drawSquare(canvas, centerSquareX, mSize - mSize / RATIO_MODE_ROOT - mCenterSquareProgress, mPaint);
         }
 
         if (isRightReverse) {
-            drawSquare(canvas, rightSquareX, mSize - mSize / 4 - mRightSquareProgress, mPaint);
+            drawSquare(canvas, rightSquareX, mSize - mSize / RATIO_MODE_ROOT - mRightSquareProgress, mPaint);
         } else {
             if (isRightReversed) {
-                drawSquare(canvas, rightSquareX, mSize / 4 + mRightSquareProgress, mPaint);
+                drawSquare(canvas, rightSquareX, mSize / RATIO_MODE_ROOT + mRightSquareProgress, mPaint);
             } else {
-                if (mSize / 4 + mRightSquareProgress <= mSize - mSize / 4) {
-                    drawSquare(canvas, rightSquareX, mSize / 4 + mRightSquareProgress, mPaint);
+                if (mSize / RATIO_MODE_ROOT + mRightSquareProgress <= mSize - mSize / RATIO_MODE_ROOT) {
+                    drawSquare(canvas, rightSquareX, mSize / RATIO_MODE_ROOT + mRightSquareProgress, mPaint);
                 } else {
-                    drawSquare(canvas, rightSquareX, mSize - mSize / 4, mPaint);
+                    drawSquare(canvas, rightSquareX, mSize - mSize / RATIO_MODE_ROOT, mPaint);
                 }
             }
         }
@@ -352,7 +352,7 @@ class RefreshView extends View {
     private void startLeftLoadingAnim() {
         if (mLeftLoadingAnim == null) {
             mLeftLoadingAnim = ValueAnimator.ofFloat(0.f);
-            mLeftLoadingAnim.setFloatValues(0.f, mSize / 2);
+            mLeftLoadingAnim.setFloatValues(0.f, mSize / RATIO_MODE_ROOT);
             mLeftLoadingAnim.setDuration(TRANSITION_LOADING_ANIM_DURATION);
             mLeftLoadingAnim.setRepeatMode(ValueAnimator.RESTART);
             mLeftLoadingAnim.setRepeatCount(ValueAnimator.INFINITE);
@@ -366,13 +366,7 @@ class RefreshView extends View {
                 }
             });
             mLeftLoadingAnim.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationStart(Animator animation) {
-                    super.onAnimationStart(animation);
-                    if (mListener != null) {
-                        mListener.onRefresh();
-                    }
-                }
+
 
                 @Override
                 public void onAnimationRepeat(Animator animation) {
@@ -388,7 +382,7 @@ class RefreshView extends View {
     private void startCenterResetAnim() {
         if (mCenterResetAnim == null) {
             mCenterResetAnim = ValueAnimator.ofFloat(0.f);
-            mCenterResetAnim.setFloatValues(0.f, mSize - mSize / 4 - (mViewCenter + mMLegWidth / 2));
+            mCenterResetAnim.setFloatValues(0.f, mSize - mSize / RATIO_MODE_ROOT - (mViewCenter + mMLegWidth / 2));
             mCenterResetAnim.setDuration(TRANSITION_ANIM_DURATION);
             mCenterResetAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
@@ -413,7 +407,7 @@ class RefreshView extends View {
     private void startCenterLoadingAnim() {
         if (mCenterLoadingAnim == null) {
             mCenterLoadingAnim = ValueAnimator.ofFloat(0.f);
-            mCenterLoadingAnim.setFloatValues(0.f, mSize / 2);
+            mCenterLoadingAnim.setFloatValues(0.f, mSize / RATIO_MODE_ROOT);
             mCenterLoadingAnim.setDuration(TRANSITION_LOADING_ANIM_DURATION);
             mCenterLoadingAnim.setRepeatMode(ValueAnimator.RESTART);
             mCenterLoadingAnim.setRepeatCount(ValueAnimator.INFINITE);
@@ -439,7 +433,7 @@ class RefreshView extends View {
     private void startRightResetAnim() {
         if (mRightResetAnim == null) {
             mRightResetAnim = ValueAnimator.ofFloat(0.f);
-            mRightResetAnim.setFloatValues(0.f, mSize / 2);
+            mRightResetAnim.setFloatValues(0.f, mSize / RATIO_MODE_ROOT);
             mRightResetAnim.setDuration(TRANSITION_RIGHT_START_DELAY);
             mRightResetAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
@@ -464,18 +458,27 @@ class RefreshView extends View {
     private void startRightLoadingAnim() {
         if (mRightLoadingAnim == null) {
             mRightLoadingAnim = ValueAnimator.ofFloat(0.f);
-            mRightLoadingAnim.setFloatValues(0.f, mSize / 2);
+            mRightLoadingAnim.setFloatValues(0.f, mSize / RATIO_MODE_ROOT);
             mRightLoadingAnim.setDuration(TRANSITION_LOADING_ANIM_DURATION);
             mRightLoadingAnim.setRepeatMode(ValueAnimator.RESTART);
             mRightLoadingAnim.setRepeatCount(ValueAnimator.INFINITE);
             mRightLoadingAnim.setInterpolator(new AccelerateDecelerateInterpolator());
             mRightLoadingAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+
                 @Override
                 public void onAnimationUpdate(ValueAnimator animation) {
                     mRightSquareProgress = (float) animation.getAnimatedValue();
                 }
             });
             mRightLoadingAnim.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+                    super.onAnimationStart(animation);
+                    if (mListener != null) {
+                        mListener.onRefresh();
+                    }
+                }
+
                 @Override
                 public void onAnimationRepeat(Animator animation) {
                     isRightReverse = !isRightReverse;
